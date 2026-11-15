@@ -1,0 +1,65 @@
+name: Deployment-pipeline
+on:
+  push:
+    branches:
+      - develop
+jobs:
+  build-and-push:
+    #Runner machine hosted by github
+    runs-on: ubuntu-22.04
+
+    steps:
+      #Get into the directory and install dependencies
+      - uses: actions/checkout@v4
+      - name: Install Dependencies
+        run: npm ci
+      #Test lint
+      - name: Run Lint
+        run: npm run lint
+
+      - name: Create env file
+        run: |
+          touch .env
+          echo "VITE_API_URL=https://laquieromuchomirna.lol/" >> .env
+          ls -a
+
+      #Build the app for production
+      - name: Build the app
+        run: npm run build
+      #Log into docker hub (Angel main account)
+      - name: Log into docker
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERNAME }}
+          password: ${{ secrets.DOCKERPASSWORD }}
+
+      #Build the image for production
+      - name: Build the image for production
+        run: |
+          ls -a
+          docker build -t front:stable .
+
+      #Tag the image for push into docker hub
+      - name: Tag the image for pushing into docker hub
+        run: docker tag front:stable ${{vars.DOCKERNAME}}/swiply:front
+
+      - name: Push the image
+        run: docker push ${{vars.DOCKERNAME}}/swiply:front
+  deploy:
+    runs-on: ubuntu-22.04
+    needs: build-and-push
+    steps:
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{secrets.SSHPRIVATEKEY}}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan "${{secrets.SERVERIP}}" > ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        run: |
+          ssh -v "${{secrets.SERVER}}" << 'EOF'
+            cd /srv/swiply/
+            docker compose pull
+            docker compose up -d
+          EOF
