@@ -3,17 +3,20 @@ on:
   push:
     branches:
       - main
+
 jobs:
   build-and-push:
-    #Runner machine hosted by github
+    # Runner machine hosted by github
     runs-on: ubuntu-22.04
 
     steps:
-      #Get into the directory and install dependencies
+      # Get into the directory and install dependencies
       - uses: actions/checkout@v4
+
       - name: Install Dependencies
         run: npm ci
-      #Test lint
+
+      # Test lint
       - name: Run Lint
         run: npm run lint
 
@@ -23,43 +26,58 @@ jobs:
           echo "VITE_API_URL=https://laquieromuchomirna.lol/" >> .env
           ls -a
 
-      #Build the app for production
+      # Build the app for production
       - name: Build the app
         run: npm run build
-      #Log into docker hub (Angel main account)
+
+      # Log into docker hub (Angel main account)
       - name: Log into docker
         uses: docker/login-action@v3
         with:
           username: ${{ vars.DOCKERNAME }}
           password: ${{ secrets.DOCKERPASSWORD }}
 
-      #Build the image for production
+      # Build the image for production
       - name: Build the image for production
         run: |
           ls -a
           docker build -t front:stable .
 
-      #Tag the image for push into docker hub
+      # Tag the image for push into docker hub
       - name: Tag the image for pushing into docker hub
-        run: docker tag front:stable ${{vars.DOCKERNAME}}/swiply:front
+        run: docker tag front:stable ${{ vars.DOCKERNAME }}/servicio:front
 
       - name: Push the image
-        run: docker push ${{vars.DOCKERNAME}}/swiply:front
+        run: docker push ${{ vars.DOCKERNAME }}/servicio:front
+
   deploy:
     runs-on: ubuntu-22.04
     needs: build-and-push
     steps:
-      - name: Set up SSH
+      - name: Set up SSH and Cloudflare Tunnel
         run: |
+          # Instalar cloudflared
+          curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared.deb
+
+          # Preparar directorio y llave SSH
           mkdir -p ~/.ssh
-          echo "${{secrets.SSHPRIVATEKEY}}" > ~/.ssh/id_ed25519
+          echo "${{ secrets.SSHPRIVATEKEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan "${{secrets.SERVERIP}}" > ~/.ssh/known_hosts
+
+          # Configurar ProxyCommand para enrutar SSH por Cloudflare Tunnel
+          cat << 'EOF' >> ~/.ssh/config
+          Host *
+            ProxyCommand /usr/local/bin/cloudflared access ssh --hostname %h
+            StrictHostKeyChecking no
+            IdentityFile ~/.ssh/id_ed25519
+          EOF
+          chmod 600 ~/.ssh/config
 
       - name: Deploy to server
         run: |
-          ssh -v "${{secrets.SERVER}}" << 'EOF'
-            cd /srv/swiply/
+          ssh -v "${{ secrets.SERVER }}" << 'EOF'
+            cd /srv/servicio/
             docker compose pull
             docker compose up -d
           EOF
