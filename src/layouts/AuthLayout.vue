@@ -7,7 +7,7 @@ const privacy = ref(false);
     <div class="auth-column">
       <section class="auth-card">
         <img class="login-logo" src="/logo-tecnm.png" alt="Tecnológico Nacional de México" width="200" height="91" />
-        <div class="login-brand"><h1>AMBAR ESTUDIANTES</h1><p>CULIACÁN</p></div>
+        <div class="login-brand"><h1>AMBAR SERVICIO SOCIAL</h1><p>CULIACÁN</p></div>
         <slot />
       </section>
       <p class="auth-footer">© {{ new Date().getFullYear() }} Servicio social · <button type="button" @click="privacy = true">Privacidad</button></p>
