@@ -7,7 +7,7 @@ export const texto = (max: number) => z.string(requerido).trim().min(1, requerid
   .refine(value => !/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/u.test(value), 'El campo contiene caracteres de control');
 const correo = texto(254).toLowerCase().pipe(z.email({ error: 'Correo electrónico inválido' }));
 export const correoInstitucional = correo.refine(
-  value => !configuracion.dominioInstitucional || value.endsWith('@' + configuracion.dominioInstitucional),
+  value => value.endsWith('@' + configuracion.dominioInstitucional),
   'Ingrese un correo institucional válido',
 );
 export const identificador = texto(32).toUpperCase().regex(/^[A-Z0-9][A-Z0-9._-]*$/, 'Identificador inválido');

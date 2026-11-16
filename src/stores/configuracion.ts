@@ -3,7 +3,7 @@ import { request } from '../lib/api';
 import type { Respuesta } from '../types';
 
 export const configuracion = reactive({
-  dominioInstitucional: import.meta.env.VITE_INSTITUTIONAL_DOMAIN || '',
+  dominioInstitucional: import.meta.env.VITE_INSTITUTIONAL_DOMAIN || 'culiacan.tecnm.mx',
   horasRequeridas: 0,
 });
 let cargada = false;

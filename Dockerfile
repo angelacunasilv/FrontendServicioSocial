@@ -1,23 +1,15 @@
-#Build stage
-FROM node:22-alpine AS build
+FROM node:24-bookworm-slim AS build
 WORKDIR /app
-COPY . .
-RUN npm install --frozen-lockfile
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY tsconfig.json vite.config.ts index.html ./
+COPY src ./src
+COPY public ./public
 RUN npm run build
 
-#Production stage
-FROM nginx:1.27.5-alpine AS production
-COPY nginx.conf /etc/nginx/nginx.conf
+FROM nginx:1.28-alpine AS production
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
-
-#Add dynamic env variables
-COPY env.sh /docker-entrypoint.d/env.sh
-RUN dos2unix /docker-entrypoint.d/env.sh
-RUN chmod +x /docker-entrypoint.d/env.sh
-
-# Let Docker run script before starting Nginx
-ENTRYPOINT ["/docker-entrypoint.sh"]
-
-EXPOSE 80 443
-#Modify nginx production
-CMD ["nginx", "-g", "daemon off;"]
+EXPOSE 80
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -q -O /dev/null http://127.0.0.1/healthz || exit 1
