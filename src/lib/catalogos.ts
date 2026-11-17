@@ -48,5 +48,7 @@ export const camposInterno: Campo[] = [
 ];
 export const camposExterno: Campo[] = [
   { key: 'nombreEmpresa', label: 'Nombre de la empresa o dependencia', maxlength: 200, full: true },
-  ...camposContacto,
+  ...camposContacto.map(campo => campo.key === 'correo' ? {
+    ...campo, hint: 'Correo de la persona o institución que ofrece el servicio social. Ejemplo: contacto@empresa.com.',
+  } : campo),
 ];
